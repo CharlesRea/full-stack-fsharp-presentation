@@ -1,11 +1,13 @@
 module Server
 
+open BlackjackApi
 open System
 open Microsoft.AspNetCore.Builder
 open Microsoft.AspNetCore.Hosting
 open Microsoft.Extensions.Logging
 open Microsoft.Extensions.DependencyInjection
 open Giraffe
+open Thoth.Json.Giraffe
 
 type GreetingResponse =
     {
@@ -19,6 +21,7 @@ let greetingsHandler (name : string) =
 
 let webApp =
     choose [
+        subRoute "/api" (blackjackHandler)
         GET >=>
             choose [
                 route "/" >=> greetingsHandler "world"
@@ -36,6 +39,7 @@ let configureApp (app : IApplicationBuilder) =
 let configureServices (services : IServiceCollection) =
     services.AddCors()    |> ignore
     services.AddGiraffe() |> ignore
+    services.AddSingleton<Giraffe.Serialization.Json.IJsonSerializer>(ThothSerializer()) |> ignore
 
 let configureLogging (builder : ILoggingBuilder) =
     builder.AddConsole()
