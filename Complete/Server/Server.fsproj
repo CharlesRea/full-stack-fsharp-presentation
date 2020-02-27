@@ -3,6 +3,7 @@
   <PropertyGroup>
     <TargetFramework>netcoreapp3.1</TargetFramework>
     <OutputType>Exe</OutputType>
+    <RootNamespace>GiraffeApi</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
@@ -12,8 +13,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Include="Database.fs" />
-    <Compile Include="Program.fs" />
+    <Compile Include="..\Shared\Shared.fs" />
+    <Compile Include="Server.fs" />
   </ItemGroup>
 
 </Project>

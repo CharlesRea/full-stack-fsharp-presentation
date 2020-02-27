@@ -1,10 +1,10 @@
 module Database
 
-open System
 open FSharp.Data.Npgsql
+open System
 
 [<Literal>]
-let connString = "Host=localhost;Database=giraffe;Username=postgres;Password=password"
+let connString = "Host=localhost;Database=giraffe;Username=postgres;Password=password;"
 
 type Connection = NpgsqlConnection<connString>
 
