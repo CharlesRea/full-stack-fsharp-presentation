@@ -37,3 +37,9 @@ let cardValue card =
 
 let cardsValue cards =
     List.sumBy cardValue cards
+
+type BlackjackApi = {
+    startGame: unit -> Async<InProgressGame>
+    hit: InProgressGame -> Async<Game>
+    stick: InProgressGame -> Async<CompletedGame>
+}

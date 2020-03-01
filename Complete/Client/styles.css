@@ -1,0 +1,35 @@
+@tailwind base;
+
+@tailwind components;
+
+.layout {
+  @apply bg-green-800;
+}
+
+.card-container {
+  @apply rounded bg-white p-5 text-4xl flex items-center justify-center mr-4;
+  width: 7rem;
+  height: 10rem;
+}
+
+.card-container:last-child {
+  margin-right: 0;
+}
+
+.card-rank {
+  @apply ml-2;
+}
+
+.spades, .clubs {
+  @apply text-gray-800;
+}
+
+.diamonds, .hearts {
+  @apply text-red-500
+}
+
+.deck {
+  @apply flex
+}
+
+@tailwind utilities;
