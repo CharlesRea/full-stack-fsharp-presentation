@@ -26,12 +26,12 @@ var CONFIG = {
     devServerProxy: {
         // redirect requests that start with /api/* to the server on port 8085
         '/api/*': {
-            target: 'http://localhost:' + (process.env.SERVER_PROXY_PORT || "8085"),
+            target: 'http://localhost:' + (process.env.SERVER_PROXY_PORT || "5000"),
             changeOrigin: true
         },
         // redirect websocket requests that start with /socket/* to the server on the port 8085
         '/socket/*': {
-            target: 'http://localhost:' + (process.env.SERVER_PROXY_PORT || "8085"),
+            target: 'http://localhost:' + (process.env.SERVER_PROXY_PORT || "5000"),
             ws: true
         }
     },

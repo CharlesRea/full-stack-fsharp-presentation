@@ -65,3 +65,9 @@ let blackjackHandler: HttpHandler =
             route "/stick" >=> bindJson<InProgressGame>(stick >> json)
         ]
     ]
+
+let blackJackApi: BlackjackApi = {
+    startGame = fun () -> async { return startGame () }
+    hit = fun (game) -> async { return hit (game) }
+    stick = fun (game) -> async { return stick (game) }
+}

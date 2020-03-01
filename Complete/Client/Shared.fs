@@ -38,6 +38,10 @@ let cardValue card =
 let cardsValue cards =
     List.sumBy cardValue cards
 
+module Route =
+    let builder typeName methodName =
+        sprintf "/api/%s" methodName
+
 type BlackjackApi = {
     startGame: unit -> Async<InProgressGame>
     hit: InProgressGame -> Async<Game>
