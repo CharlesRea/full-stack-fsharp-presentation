@@ -24,27 +24,27 @@ let randomRank () =
     | 13 -> King
     | i -> Value i
 
-let getCard (): Card =
-    { Suit = randomSuit (); Rank = randomRank () }
+let dealCard (): Card =
+    (randomRank (), randomSuit ())
 
 let startGame (): InProgressGame =
-    let cards = [ getCard (); getCard () ]
+    let cards = [ dealCard (); dealCard () ]
     { Player = cards }
 
 let hit (game: InProgressGame): Game =
-    let newCards = getCard () :: game.Player
+    let newCards = dealCard () :: game.Player
     match cardsValue newCards with
     | value when value > 21 -> Complete { Player = newCards; Dealer = []; Winner = Dealer; }
     | _ -> InProgress { Player = newCards; }
 
 let getDealerCards () =
-    let rec dealCard cards =
-        let newCards = getCard () :: cards
+    let rec getCards (cards: Card list) =
+        let newCards = dealCard () :: cards
         match cardsValue newCards with
         | value when value > 16 -> newCards
-        | _ -> dealCard newCards
+        | _ -> getCards newCards
 
-    dealCard []
+    getCards []
 
 let stick (game: InProgressGame): CompletedGame =
     let dealerCards = getDealerCards ()
@@ -67,7 +67,5 @@ let blackjackHandler: HttpHandler =
     ]
 
 let blackJackApi: BlackjackApi = {
-    startGame = fun () -> async { return startGame () }
-    hit = fun (game) -> async { return hit (game) }
-    stick = fun (game) -> async { return stick (game) }
+    dealCard = fun () -> async { return dealCard () }
 }

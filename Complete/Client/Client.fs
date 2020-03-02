@@ -16,68 +16,97 @@ let blackjackApi =
   |> Remoting.withRouteBuilder Route.builder
   |> Remoting.buildProxy<BlackjackApi>
 
+let dealCard = blackjackApi.dealCard
+
+let startGame (): Async<InProgressGame> =
+    async {
+        let! cards = [ dealCard (); dealCard () ] |> Async.Parallel
+        return { Player = cards |> Seq.toList }
+    }
+
+let hit (game: InProgressGame): Async<Game> =
+    async {
+        let! newCard = dealCard ()
+        let newCards = newCard :: game.Player
+        return match cardsValue newCards with
+                    | value when value > 21 -> Complete { Player = newCards; Dealer = []; Winner = Dealer; }
+                    | _ -> InProgress { Player = newCards; }
+    }
+
+let getDealerCards () =
+    let rec getCards (cards: Card list) =
+        async {
+            let! newCard = dealCard ()
+            let newCards = newCard :: cards
+            match cardsValue newCards with
+            | value when value > 16 -> return newCards
+            | _ -> return! getCards newCards
+        }
+
+    getCards []
+
+let stick (game: InProgressGame): Async<CompletedGame> =
+    async {
+        let! dealerCards = getDealerCards ()
+        let playerValue = cardsValue game.Player
+        let winner = match cardsValue dealerCards with
+                     | value when value > 21 -> Player
+                     | value when value > playerValue -> Dealer
+                     | value when value = playerValue -> Tie
+                     | _ -> Player
+
+        return { Player = game.Player; Dealer = dealerCards; Winner = winner }
+    }
+
 type ApiRequest =
     | NotStarted
     | Loading
+    | Error of exn
 
 type Model = {
     Game: Game option
-    StartGameRequest: ApiRequest
-    HitRequest: ApiRequest
-    StickRequest: ApiRequest
-    ServerError: exn option
+    DealCard: ApiRequest
 }
-
-type ApiRequestMessage<'response> =
-    | BeginRequest
-    | Succeeded of response: 'response
-    | Failed of exn
 
 type Message =
     | StartGame
-    | StartGameResponse of InProgressGame
-    | StartGameFailed of exn
+    | StartGameSucceeded of InProgressGame
     | Hit
-    | HitResponse of Game
-    | HitFailed of exn
+    | HitSucceeded of Game
     | Stick
-    | StickResponse of CompletedGame
-    | StickFailed of exn
+    | StickSucceeded of CompletedGame
+    | RequestFailed of exn
 
 let init () =
     { Game = None
-      StartGameRequest = NotStarted
-      HitRequest = NotStarted
-      StickRequest = NotStarted
-      ServerError = None }, Cmd.none
+      DealCard = NotStarted }, Cmd.none
 
 let update (message: Message) (model: Model): Model * Cmd<Message> =
     match (message, model.Game) with
-    | StartGame, _ -> { model with StartGameRequest = Loading; ServerError = None; }, Cmd.OfAsync.either blackjackApi.startGame () StartGameResponse StartGameFailed
-    | StartGameResponse game, _ -> { model with Game = Some (InProgress game); StartGameRequest = NotStarted; }, Cmd.none
-    | StartGameFailed error, _ -> { model with StartGameRequest = NotStarted; ServerError = Some error; }, Cmd.none
+    | StartGame, _ -> { model with DealCard = Loading }, Cmd.OfAsync.either startGame () StartGameSucceeded RequestFailed
+    | StartGameSucceeded game, _ -> { model with Game = Some (InProgress game); DealCard = NotStarted; }, Cmd.none
 
-    | Hit, Some (InProgress game) -> { model with HitRequest = Loading; ServerError = None; }, Cmd.OfAsync.either blackjackApi.hit game HitResponse HitFailed
-    | HitResponse game, _ -> { model with Game = Some game; HitRequest = NotStarted; }, Cmd.none
-    | HitFailed error, _ -> { model with HitRequest = NotStarted; ServerError = Some error; }, Cmd.none
+    | Hit, Some (InProgress game) -> { model with DealCard = Loading; }, Cmd.OfAsync.either hit game HitSucceeded RequestFailed
+    | HitSucceeded game, _ -> { model with Game = Some game; DealCard = NotStarted; }, Cmd.none
 
-    | Stick, Some (InProgress game) -> { model with HitRequest = Loading; ServerError = None; }, Cmd.OfAsync.either blackjackApi.stick game StickResponse StickFailed
-    | StickResponse game, _ -> { model with Game = Some (Complete game); StickRequest = NotStarted; }, Cmd.none
-    | StickFailed error, _ -> { model with StickRequest = NotStarted; ServerError = Some error; }, Cmd.none
+    | Stick, Some (InProgress game) -> { model with DealCard = Loading; }, Cmd.OfAsync.either stick game StickSucceeded RequestFailed
+    | StickSucceeded game, _ -> { model with Game = Some (Complete game); DealCard = NotStarted; }, Cmd.none
+
+    | RequestFailed error, _ -> { model with DealCard = Error error; }, Cmd.none
 
     | _ -> model, Cmd.none
 
 type CardProps = { Card: Card }
-let card = elmishView "Card" (fun ({ Card = card }: CardProps) ->
+let card = elmishView "Card" (fun ({ Card = (rank, suit) }: CardProps) ->
     let (suitIcon, suitClass) =
-        match card.Suit with
+        match suit with
         | Spades -> Fa.Solid.UtensilSpoon, "spades"
         | Hearts -> Fa.Solid.Heart, "hearts"
         | Diamonds -> Fa.Solid.Gem, "diamonds"
         | Clubs -> Fa.Solid.Users, "clubs"
 
     let rank =
-        match card.Rank with
+        match rank with
         | Ace -> "A"
         | Rank.Value value -> value |> string
         | Jack -> "J"
@@ -98,9 +127,15 @@ let deck = elmishView "Deck" (fun ({ Deck = deck }: DeckProps) ->
 )
 
 let view (model: Model) (dispatch: Message -> unit) =
-    let errorMessage = model.ServerError
-                       |> Option.map (fun _ -> div [ Class "error" ] [ str "Oops, something went wrong. Please try again" ])
-                       |> Option.defaultValue (div [] [])
+    let errorMessage =
+        match model.DealCard with
+        | Error error -> div [ Class "error" ] [ str "Oops, something went wrong. Please try again" ]
+        | _ -> div [] []
+
+    let loadingClass =
+        match model.DealCard with
+        | Loading -> "loading"
+        | _ -> ""
 
     match model.Game with
     | None ->
@@ -109,7 +144,7 @@ let view (model: Model) (dispatch: Message -> unit) =
             errorMessage
             button [
                 OnClick (fun _ -> dispatch StartGame)
-                Classes [ if model.StartGameRequest = Loading then yield "loading"; ]
+                Classes [ loadingClass ]
             ] [ str "Play Blackjack!" ]
         ]
 
@@ -119,11 +154,11 @@ let view (model: Model) (dispatch: Message -> unit) =
             deck { Deck = game.Player }
             button [
                 OnClick (fun _ -> dispatch Hit)
-                Classes [ if model.HitRequest = Loading then yield "loading"; ]
+                Classes [ loadingClass ]
             ] [ str "Hit" ]
             button [
                 OnClick (fun _ -> dispatch Stick)
-                Classes [ if model.StickRequest = Loading then yield "loading"; ]
+                Classes [ loadingClass ]
             ] [ str "Stick" ]
         ]
 
@@ -137,7 +172,7 @@ let view (model: Model) (dispatch: Message -> unit) =
             str ("The winner was: " + (game.Winner |> string))
             button [
                 OnClick (fun _ -> dispatch StartGame)
-                Classes [ if model.StartGameRequest = Loading then yield "loading"; ]
+                Classes [ loadingClass ]
             ] [ str "Play again" ]
         ]
 

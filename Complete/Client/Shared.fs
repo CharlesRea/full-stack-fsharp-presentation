@@ -13,9 +13,7 @@ type Rank =
     | Queen
     | Jack
 
-type Card =
-    { Suit: Suit
-      Rank: Rank }
+type Card = Rank * Suit
 
 type Winner =
     | Player
@@ -29,21 +27,19 @@ type Game =
     | InProgress of InProgressGame
     | Complete of CompletedGame
 
-let cardValue card =
-    match card.Rank with
+let cardValue ((rank, _): Card) =
+    match rank with
     | Value i -> i
     | Ace -> 11
     | _ -> 10
 
 let cardsValue cards =
-    List.sumBy cardValue cards
+    cards |> List.map cardValue |> List.sum
 
 module Route =
     let builder typeName methodName =
         sprintf "/api/%s" methodName
 
 type BlackjackApi = {
-    startGame: unit -> Async<InProgressGame>
-    hit: InProgressGame -> Async<Game>
-    stick: InProgressGame -> Async<CompletedGame>
+    dealCard: unit -> Async<Card>
 }
