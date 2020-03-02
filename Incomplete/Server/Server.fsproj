@@ -7,14 +7,17 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Fable.Remoting.Giraffe" Version="3.11.2" />
     <PackageReference Include="FSharp.Data.Npgsql" Version="0.1.49-beta" />
-    <PackageReference Include="Giraffe" Version="3.4.*" />
+    <PackageReference Include="Giraffe" Version="3.6.0" />
     <PackageReference Include="TaskBuilder.fs" Version="2.1.*" />
+    <PackageReference Include="Thoth.Json.Giraffe" Version="3.2.0" />
+    <PackageReference Include="Thoth.Json.Net" Version="3.6.0" />
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Include="..\Shared\Shared.fs" />
-    <Compile Include="Server.fs" />
+    <Compile Include="..\Client\Shared.fs" />
+    <Compile Include="Program.fs" />
   </ItemGroup>
 
 </Project>

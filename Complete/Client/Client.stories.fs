@@ -15,10 +15,17 @@ let allCards: Card seq = seq {
             yield (rank, suit)
 }
 
+let exampleDeck = {
+    Deck = {
+        Cards = [(Jack, Spades); (Value 2, Hearts); (Value 10, Diamonds); (Ace, Clubs)]
+        Score = 12;
+    }
+}
+
 storiesOf("Blackjack", webpackModule)
     .add("Single card", (fun _ -> card { Card = (Jack, Spades) }))
     .add("All cards", (fun _ -> div [] [
         allCards |> Seq.map (fun c -> card { Card = c }) |> Seq.toList |> ofList
     ]))
-    .add("Deck", (fun _ -> deck { Deck = [(Jack, Spades); (Value 2, Hearts); (Value 10, Diamonds); (Ace, Clubs)] }))
+    .add("Deck", (fun _ -> deck exampleDeck))
     |> ignore

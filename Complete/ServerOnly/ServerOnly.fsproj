@@ -16,7 +16,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Include="..\Client\Shared.fs" />
     <Compile Include="Blackjack.fs" />
     <Compile Include="Server.fs" />
   </ItemGroup>

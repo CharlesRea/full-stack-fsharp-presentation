@@ -1,12 +1,50 @@
-module BlackjackApi
+module Blackjack
 
 open System
-open Microsoft.FSharp.Reflection
-open Shared
 open Giraffe
 
+type Suit =
+    | Hearts
+    | Clubs
+    | Diamonds
+    | Spades
+
+type Rank =
+    | Value of int
+    | Ace
+    | King
+    | Queen
+    | Jack
+
+type Card = Rank * Suit
+
+type Deck = { Cards: Card list; Score: int }
+
+type Winner =
+    | Player
+    | Dealer
+    | Tie
+
+type InProgressGame = { Player: Deck }
+type CompletedGame = { Player: Deck; Dealer: Deck option; Winner: Winner }
+
+type Game =
+    | InProgress of InProgressGame
+    | Complete of CompletedGame
+
+let cardScore ((rank, _): Card) =
+    match rank with
+    | Value i -> i
+    | Ace -> 11
+    | _ -> 10
+
+let deckScore cards =
+    cards |> List.map cardScore |> List.sum
+
+let makeDeck cards =
+    { Cards = cards; Score = deckScore cards }
+
 let random = Random()
-let suits = FSharpType.GetUnionCases typeof<Suit>
 
 let randomSuit () =
     match random.Next(4) with
@@ -29,18 +67,18 @@ let dealCard (): Card =
 
 let startGame (): InProgressGame =
     let cards = [ dealCard (); dealCard () ]
-    { Player = cards }
+    { Player = makeDeck cards }
 
 let hit (game: InProgressGame): Game =
-    let newCards = dealCard () :: game.Player
-    match cardsValue newCards with
-    | value when value > 21 -> Complete { Player = newCards; Dealer = []; Winner = Dealer; }
-    | _ -> InProgress { Player = newCards; }
+    let newCards = dealCard () :: game.Player.Cards
+    match deckScore newCards with
+    | value when value > 21 -> Complete { Player = makeDeck newCards; Dealer = None;  Winner = Dealer; }
+    | _ -> InProgress { Player = makeDeck newCards; }
 
 let getDealerCards () =
     let rec getCards (cards: Card list) =
         let newCards = dealCard () :: cards
-        match cardsValue newCards with
+        match deckScore newCards with
         | value when value > 16 -> newCards
         | _ -> getCards newCards
 
@@ -48,14 +86,14 @@ let getDealerCards () =
 
 let stick (game: InProgressGame): CompletedGame =
     let dealerCards = getDealerCards ()
-    let playerValue = cardsValue game.Player
-    let winner = match cardsValue dealerCards with
+    let playerValue = game.Player.Score
+    let winner = match deckScore dealerCards with
                  | value when value > 21 -> Player
                  | value when value > playerValue -> Dealer
                  | value when value = playerValue -> Tie
                  | _ -> Player
 
-    { Player = game.Player; Dealer = dealerCards; Winner = winner }
+    { Player = game.Player; Dealer = Some (makeDeck dealerCards); Winner = winner }
 
 let blackjackHandler: HttpHandler =
     choose [
@@ -65,7 +103,3 @@ let blackjackHandler: HttpHandler =
             route "/stick" >=> bindJson<InProgressGame>(stick >> json)
         ]
     ]
-
-let blackJackApi: BlackjackApi = {
-    dealCard = fun () -> async { return dealCard () }
-}

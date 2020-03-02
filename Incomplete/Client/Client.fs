@@ -1,14 +1,14 @@
-module App
+module Client
 
-open Browser.Dom
+open Shared
+open Elmish
+open Fable.Remoting.Client
+open Fable.React
+open Fable.React.Props
+open Utils
+open Fable.FontAwesome
+open Fable.Core.JsInterop
+open Zanaptak.TypedCssClasses
+open Browser
 
-printf "Hello from Fable!"
-
-let mutable count = 0
-
-let counterButton = document.querySelector(".my-button") :?> Browser.Types.HTMLButtonElement
-
-counterButton.onclick <- fun _ ->
-    count <- count + 1
-    counterButton.innerText <- sprintf "You clicked: %i time(s)" count
-
+printf "Hello world, from Fable!"
